@@ -1,0 +1,10 @@
+*.lps
+*.dll
+*.so
+*.so.aarch64
+*.dylib
+*.bat
+*.res
+*.exe
+backup
+lib
