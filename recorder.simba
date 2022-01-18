@@ -1,0 +1,12 @@
+procedure StartRecording(Window: TWindowHandle; Seconds: Integer; Directory: String; Debugging: Boolean = False);
+const
+  RECORDING_SCRIPT = {$macro CURRENT_DIRECTORY} + 'dorecording.simba';
+begin
+  RunScript(RECORDING_SCRIPT, [
+    'ScriptPID=' + ToString(GetScriptPID()),
+    'Window='    + ToString(Window),
+    'Seconds='   + ToString(Seconds),
+    'Directory=' + ToString(Directory),
+    'Debugging=' + ToString(Debugging)
+  ]);
+end;

@@ -1,0 +1,36 @@
+{$loadlib librecorder}
+
+var
+  Image: TMufasaBitmap;
+  PID: TProcessID;
+
+function GetFrame(Sender: TRecorder): Pointer;
+begin
+  Image.LoadFromClient();
+
+  Result := Image.GetData();
+end;
+
+function GetTerminated(Sender: TRecorder): Boolean;
+begin
+  Result := not IsProcessRunning(PID);
+end;
+
+var
+  Recorder: TRecorder;
+
+begin
+  SetTargetWindow(GetScriptParameter('Window').ExtractNumber());
+
+  Image.Init();
+  Image.LoadFromClient();
+
+  PID := GetScriptParameter('ScriptPID').ExtractNumber(0);
+
+  Recorder := TRecorder.Create(GetScriptParameter('Seconds').ExtractNumber(), GetScriptParameter('Directory'), Image.GetWidth(), Image.GetHeight(), @GetFrame, @GetTerminated);
+  Recorder.SetFFMPEG({$MACRO CURRENT_DIRECTORY} + 'ffmpeg.exe');
+  Recorder.Run(GetScriptParameter('Debugging') = 'True');
+  Recorder.Free();
+
+  Image.Free();
+end;
