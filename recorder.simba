@@ -1,9 +1,9 @@
-procedure StartRecording(Window: TWindowHandle; Seconds: Integer; Directory: String; Debugging: Boolean = False);
+procedure StartRecording(Window: PtrUInt; Seconds: Integer; Directory: String; Debugging: Boolean = False);
 const
-  RECORDING_SCRIPT = {$macro CURRENT_DIRECTORY} + 'dorecording.simba';
+  RECORDING_SCRIPT := IncludeTrailingPathDelimiter({$macro CURRENT_DIRECTORY}) + 'dorecording.simba';
 begin
   RunScript(RECORDING_SCRIPT, [
-    'ScriptPID=' + ToString(GetScriptPID()),
+    'ScriptPID=' + ToString({$IFDEF SIMBA1400}GetProcessID(){$ELSE}GetScriptPID(){$ENDIF}),
     'Window='    + ToString(Window),
     'Seconds='   + ToString(Seconds),
     'Directory=' + ToString(Directory),

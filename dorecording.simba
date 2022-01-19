@@ -2,11 +2,11 @@
 
 var
   Image: TMufasaBitmap;
-  PID: TProcessID;
+  PID: PtrUInt;
 
 function GetFrame(Sender: TRecorder): Pointer;
 begin
-  Image.LoadFromClient();
+  Image.CopyClientToBitmap(Client.getIOManager(), False, 0, 0, Image.GetWidth()-1, Image.GetHeight()-1);
 
   Result := Image.GetData();
 end;
@@ -16,20 +16,32 @@ begin
   Result := not IsProcessRunning(PID);
 end;
 
+function GetParam(Name: String): Variant;
+begin
+  {$IFDEF SIMBA1400}
+  Result := GetProcessParameter(Name);
+  {$ELSE}
+  Result := GetScriptParameter(Name);
+  {$ENDIF}
+end;
+
 var
   Recorder: TRecorder;
+  W, H: Integer;
 
 begin
-  SetTargetWindow(GetScriptParameter('Window').ExtractNumber());
+  Client.GetIOManager().SetTarget(GetParam('Window'));
+  Client.GetIOManager().GetDimensions(W, H);
 
   Image.Init();
-  Image.LoadFromClient();
+  Image.SetSize(W, H);
+  Image.CopyClientToBitmap(Client.getIOManager(), False, 0, 0, Image.GetWidth()-1, Image.GetHeight()-1);
 
-  PID := GetScriptParameter('ScriptPID').ExtractNumber(0);
+  PID := GetParam('ScriptPID');
 
-  Recorder := TRecorder.Create(GetScriptParameter('Seconds').ExtractNumber(), GetScriptParameter('Directory'), Image.GetWidth(), Image.GetHeight(), @GetFrame, @GetTerminated);
-  Recorder.SetFFMPEG({$MACRO CURRENT_DIRECTORY} + 'ffmpeg.exe');
-  Recorder.Run(GetScriptParameter('Debugging') = 'True');
+  Recorder := TRecorder.Create(GetParam('Seconds'), GetParam('Directory'), Image.GetWidth(), Image.GetHeight(), @GetFrame, @GetTerminated);
+  Recorder.SetFFMPEG(IncludeTrailingPathDelimiter({$MACRO CURRENT_DIRECTORY}) + 'ffmpeg.exe');
+  Recorder.Run(GetParam('Debugging') = 'True');
   Recorder.Free();
 
   Image.Free();
