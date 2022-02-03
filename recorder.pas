@@ -5,7 +5,7 @@ unit recorder;
 interface
 
 uses
-  classes, sysutils, syncobjs, intfgraphics, graphtype, lcltype, fileutil, process;
+  classes, sysutils, syncobjs, intfgraphics, graphtype, fileutil, process;
 
 type
   TRecorder = class;
@@ -89,7 +89,7 @@ type
 implementation
 
 uses
-  lz4;
+  FPImage, FPWritePNG, ZStream, lz4;
 
 const
   ONE_MB = 1024 * 1024;
@@ -99,7 +99,7 @@ begin
   Result := Format('%f', [Bytes / ONE_MB]) + 'mb';
 end;
 
-procedure Swap(var A, B: Pointer);
+procedure Swap(var A, B: Pointer); inline;
 var
   T: Pointer;
 begin
@@ -108,7 +108,7 @@ begin
   B := T;
 end;
 
-procedure ShiftUp(var CompressedFrames: TCompressedFramesArray);
+procedure ShiftUp(var CompressedFrames: TCompressedFramesArray); inline;
 var
   Temp: TCompressedFrames;
 begin
@@ -277,6 +277,8 @@ begin
 end;
 
 procedure TRecorder.GenerateVideo;
+var
+  ImageWriter: TFPWriterPNG;
 
   function MakeFile(Name: String; CreateDir, CreateFile: Boolean): String;
   var
@@ -298,7 +300,7 @@ procedure TRecorder.GenerateVideo;
   begin
     Move(Frame^, Image.PixelData^, FrameSize);
 
-    Image.SaveToFile(FrameDirectory + IntToStr(FrameIndex) + '.bmp');
+    Image.SaveToFile(FrameDirectory + IntToStr(FrameIndex) + '.png', ImageWriter);
   end;
 
 var
@@ -314,6 +316,9 @@ begin
   RawImage := Default(TRawImage);
   RawImage.Description.Init_BPP32_B8G8R8_BIO_TTB(FFrameWidth, FFrameHeight);
   RawImage.CreateData(True);
+
+  ImageWriter := TFPWriterPNG.Create();
+  ImageWriter.CompressionLevel := clfastest;
 
   Image := TLazIntfImage.Create(RawImage, False);
   try
@@ -340,13 +345,18 @@ begin
 
     FileName := MakeFile('recording_%d.mp4', False, True);
 
-    if (not RunCommand(FFMPEGPath, ['-y', '-framerate', IntToStr(FPS), '-f', 'image2' ,'-i', FrameDirectory + '%d.bmp', '-vf', 'pad=ceil(iw/2)*2:ceil(ih/2)*2', '-vcodec', 'libx264', '-crf', '25', '-pix_fmt', 'yuv420p', FileName], Output, [poStderrToOutPut])) then
+    if (not RunCommand(FFMPEGPath, ['-y', '-framerate', IntToStr(FPS), '-f', 'image2' ,'-i', FrameDirectory + '%d.png', '-vf', 'pad=ceil(iw/2)*2:ceil(ih/2)*2', '-vcodec', 'libx264', '-crf', '25', '-pix_fmt', 'yuv420p', FileName], Output, [poStderrToOutPut])) then
       Error(Output, []);
   finally
     DeleteDirectory(FrameDirectory, False);
+
+    if (ImageWriter <> nil) then
+      ImageWriter.Free();
     if (Image <> nil) then
       Image.Free();
   end;
+
+  RawImage.FreeData();
 end;
 
 procedure TRecorder.Run(Debugging: Boolean);
