@@ -13,7 +13,7 @@ end;
 
 function GetTerminated(Sender: TRecorder): Boolean;
 begin
-  Result := not IsProcessRunning(PID);
+  Result := (not IsProcessRunning(PID)) or (not Client.GetIOManager().TargetValid());
 end;
 
 function GetParam(Name: String): Variant;

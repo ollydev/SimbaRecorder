@@ -1,12 +1,39 @@
-procedure StartRecording(Window: PtrUInt; Seconds: Integer; Directory: String; Debugging: Boolean = False);
-const
-  RECORDING_SCRIPT := IncludeTrailingPathDelimiter({$macro CURRENT_DIRECTORY}) + 'dorecording.simba';
+type
+  TRecorder = record
+    PID: Integer;
+    Debugging: Boolean;
+  end;
+
+var
+  Recorder: TRecorder;
+
+procedure TRecorder.Start(Window: PtrUInt; Seconds: Integer; Directory: String); overload;
+
+  function ScriptPID: Integer;
+  begin
+    {$IFDEF SIMBA1400}
+    Result := GetProcessID()
+    {$ELSE}
+    Result := GetScriptPID();
+    {$ENDIF}
+  end;
+
+  function RecorderScript: String;
+  begin
+    Result :=  IncludeTrailingPathDelimiter({$macro CURRENT_DIRECTORY}) + 'subprocess.simba';
+  end;
+
 begin
-  RunScript(RECORDING_SCRIPT, [
-    'ScriptPID=' + ToString({$IFDEF SIMBA1400}GetProcessID(){$ELSE}GetScriptPID(){$ENDIF}),
+  Self.PID := RunScript(RecorderScript(), [
+    'ScriptPID=' + ToString(ScriptPID()),
     'Window='    + ToString(Window),
     'Seconds='   + ToString(Seconds),
     'Directory=' + ToString(Directory),
-    'Debugging=' + ToString(Debugging)
+    'Debugging=' + ToString(Self.Debugging)
   ]);
+end;
+
+procedure TRecorder.Start(Seconds: Integer; Directory: String); overload;
+begin
+  Start(GetTargetWindow(), Seconds, Directory);
 end;
