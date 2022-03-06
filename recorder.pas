@@ -310,6 +310,8 @@ var
   Size: Integer;
   Output, FileName, FrameDirectory: String;
 begin
+  Debug('Generating video', []);
+
   FrameIndex := 0;
   FrameDirectory := IncludeTrailingPathDelimiter(MakeFile('frames_%d', True, False));
 
@@ -380,30 +382,23 @@ begin
   FCompressThread := TCompressThread.Create(Self);
 
   try
-    while True do
+    while (not FGetTerminated(Self)) do
     begin
-      if (FRawFrameIndex = 0) and FGetTerminated(Self) then
-        Break;
-
       TimeUsed := GetTickCount64();
       AddFrame(FGetFrame(Self));
       TimeUsed := GetTickCount64() - TimeUsed;
 
       Idle(TimeUsed);
     end;
-
-    FCompressThread.Terminate();
-    FCompressThread.WaitFor();
-
-    GenerateVideo();
   except
     on E: Exception do
-    begin
       Error(E.Message, []);
-
-      raise;
-    end;
   end;
+
+  FCompressThread.Terminate();
+  FCompressThread.WaitFor();
+
+  GenerateVideo();
 end;
 
 constructor TRecorder.Create(Seconds: Integer; Directory: String; Width, Height: Integer; GetFrameFunc: TRecorderGetFrame; GetTerminatedFunc: TRecorderGetTerminated);
